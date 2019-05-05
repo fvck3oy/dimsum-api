@@ -50,10 +50,9 @@ export class UsersController {
   @Get('allusers')
   async findAllusers(@Req() $req, @Res() $res) {
     try {
-      let where = await `users.isDisable = false && users.roles = 'user' `;
+      let where = await `users.isDisable = false && users.role = 'user' `;
       let relations = await [];
       let order = await [];
-
       let userData = await this.userService.queryBuilder(
         where,
         // relations,
@@ -73,11 +72,15 @@ export class UsersController {
       //   $body.id = await parseInt($body.id.toString());
       // }
       console.log($body);
+
       let users = await Object.assign({}, $body);
+
       users.password = await sha512
         .update($body['password'])
         .update(AppConfigure.hkey)
         .hex();
+
+      console.log('sha .... ', users.password);
 
       users = await this.userService.saveOne(users);
       await $res.status(HttpStatus.OK).json(users);
@@ -91,13 +94,12 @@ export class UsersController {
   @Post('login')
   async login(@Body() $body, @Res() $res) {
     try {
-      console.log('loging ... : ' , $body);
-      
+      console.log('รหัสที่ป้อนเข้ามา ... : ', $body); //แสดงข้อมูลของ  $body
+
       let user = await this.userService.findOne({
         where: {
           email: $body['email'],
         },
-
       });
 
       if (user) {
@@ -108,18 +110,21 @@ export class UsersController {
             .update(AppConfigure.hkey)
             .hex())
         ) {
+
           let token = jwt.sign(
             {
               id: user.id,
               firstname: user.firstname,
               lastname: user.lastname,
               role: user.role,
+              email: user.email,
             },
             'shhhhh',
             { expiresIn: '24h' },
           );
-
+          console.log('token : ', token);
           await $res.status(HttpStatus.OK).json({ token });
+          
         } else {
           await $res
             .status(HttpStatus.OK)
